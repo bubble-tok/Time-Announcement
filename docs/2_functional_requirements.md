@@ -42,10 +42,8 @@ Users can customize the TTS experience through the Settings screen:
 
 | Setting | Options |
 |---------|---------|
-| Language | en-US, en-GB, ko-KR, and more |
-| Speech speed | Slow / Normal / Fast |
+| Language | en-US |
 | Volume | Follow system volume or custom app volume |
-| Test | Play a sample announcement with current settings |
 
 #### Data Persistence
 All schedules and TTS settings are stored locally on the device using shared_preferences. All data persists after app restart or force kill. On relaunch, all notifications are automatically rescheduled.
@@ -64,6 +62,12 @@ The app requires notification and background execution permissions. On first lau
 | Custom messages | User-defined announcement text instead of time |
 | Custom voices | Additional voice packs |
 
+| Setting | Options |
+|---------|---------|
+| Speech speed | Slow / Normal / Fast |
+| Test | Play a sample announcement with current settings |
+
+
 ---
 
 ## 2.2 Scenario Model
@@ -72,10 +76,10 @@ The app requires notification and background execution permissions. On first lau
 
 | Field | Detail |
 |-------|--------|
-| Description | The end user who sets announce times and manages their daily schedule through the app |
+| Description | The end user toggles the global ON/OFF to turn the time announcement on and off |
 | Aliases | User |
 | Actor Type | Person |
-| Relationships | Interacts with the app to set schedules and TTS settings |
+| Relationships | Interacts with the global ON/OFF toggle button |
 
 ### 2.2.2 Actor - System
 
@@ -90,7 +94,100 @@ The app requires notification and background execution permissions. On first lau
 
 ## 2.3 Use Cases
 
-### 2.3.1 Quick Setup
+---
+### 2.3.1 First Launch
+
+| Field | Detail |
+|-------|--------|
+| Name | First Launch |
+| Primary Actor | User |
+| Goal | Set up permissions and default settings on first app launch |
+| Preconditions | App is installed and launched for the first time |
+| Trigger | User opens the app for the first time |
+
+**Scenario:**
+1. App launches for the first time
+2. App requests notification permission 
+   
+   → User grants → continue
+
+   → User denies → show warning banner on Home Screen
+3. App requests background execution permission
+  
+   → User grants → continue
+   → User denies → show warning banner on Home Screen
+4. Default TTS settings applied:
+   
+   → Language: match system language
+     (Set to en-US)
+   
+   → Speed: Normal
+   
+   → Volume: Follow system volume
+
+5. Home Screen displayed
+
+**Alternatives:** 
+- User denies all permissions → app still opens but announcements won't work
+- User can fix permissions later via Settings Screen
+
+**Exceptions:**
+- Permission request dialog fails → retry on next launch
+- Default data fails to save → retry on next launch
+---
+
+### 2.3.2 Global Toggle
+
+| Field | Detail |
+|-------|--------|
+| Name | Global Toggle |
+| Primary Actor | User |
+| Goal | Instantly silence or restore all announcements |
+| Preconditions | App is running |
+| Trigger | User taps the global toggle on Home Screen |
+
+**Scenario — Toggle OFF:**
+1. User taps global toggle → OFF
+2. StorageService saves globalEnabled = false
+3. SchedulerService cancels ALL notifications across all 7 days
+4. UI reflects global OFF state
+
+**Scenario — Toggle ON:**
+1. User taps global toggle → ON
+2. StorageService saves globalEnabled = true
+3. SchedulerService reschedules ALL enabled days and their times
+4. UI reflects global ON state
+
+**Exceptions:**
+- Storage write fails → state reverted
+- Rescheduling fails → user informed via snackbar
+
+---
+
+### 2.4.5 TTS Settings
+
+| Field | Detail |
+|-------|--------|
+| Name | TTS Settings |
+| Primary Actor | User |
+| Goal | Customize TTS volume |
+| Preconditions | App is running. User pressed volume |
+| Trigger | User adjusts volume |
+
+**Scenario:**
+1. User opens the app
+2. User changes volume
+3. StorageService saves new settings
+4. TtsService applies new settings immediately
+
+**Exceptions:**
+- TTS engine unavailable → error message shown
+---
+
+## 2.4 Use Cases (Future Extension)
+
+
+### 2.4.1 Quick Setup
 
 | Field | Detail |
 |-------|--------|
@@ -122,7 +219,7 @@ The app requires notification and background execution permissions. On first lau
 
 ---
 
-### 2.3.2 Add Time
+### 2.4.2 Add Time
 
 | Field | Detail |
 |-------|--------|
@@ -150,7 +247,7 @@ The app requires notification and background execution permissions. On first lau
 
 ---
 
-### 2.3.3 Delete Time
+### 2.4.3 Delete Time
 
 | Field | Detail |
 |-------|--------|
@@ -173,7 +270,7 @@ The app requires notification and background execution permissions. On first lau
 
 ---
 
-### 2.3.4 Toggle Day Schedule
+### 2.4.4 Toggle Day Schedule
 
 | Field | Detail |
 |-------|--------|
@@ -199,37 +296,10 @@ The app requires notification and background execution permissions. On first lau
 - No announce times set → toggle ON has no effect
 - Storage write fails → state reverted
 
----
-
-### 2.3.5 Global Toggle
-
-| Field | Detail |
-|-------|--------|
-| Name | Global Toggle |
-| Primary Actor | User |
-| Goal | Instantly silence or restore all announcements |
-| Preconditions | App is running |
-| Trigger | User taps the global toggle on Home Screen |
-
-**Scenario — Toggle OFF:**
-1. User taps global toggle → OFF
-2. StorageService saves globalEnabled = false
-3. SchedulerService cancels ALL notifications across all 7 days
-4. UI reflects global OFF state
-
-**Scenario — Toggle ON:**
-1. User taps global toggle → ON
-2. StorageService saves globalEnabled = true
-3. SchedulerService reschedules ALL enabled days and their times
-4. UI reflects global ON state
-
-**Exceptions:**
-- Storage write fails → state reverted
-- Rescheduling fails → user informed via snackbar
 
 ---
 
-### 2.3.6 TTS Settings
+### 2.4.5 TTS Settings
 
 | Field | Detail |
 |-------|--------|
@@ -253,56 +323,3 @@ The app requires notification and background execution permissions. On first lau
   → fallback to en-US automatically
 - User can manually override system language in Settings Screen
 
-### 2.3.7 First Launch
-
-| Field | Detail |
-|-------|--------|
-| Name | First Launch |
-| Primary Actor | User |
-| Goal | Set up permissions and default settings on first app launch |
-| Preconditions | App is installed and launched for the first time |
-| Trigger | User opens the app for the first time |
-
-**Scenario:**
-1. App launches for the first time
-2. App requests notification permission
-   
-   → User grants → continue
-  
-   → User denies → show warning banner on Home Screen
-3. App requests background execution permission
-  
-   → User grants → continue
-  
-   → User denies → show warning banner on Home Screen
-4. Default TTS settings applied:
-   
-   → Language: match system language
-     (if system language not supported by flutter_tts
-      → fallback to en-US)
-   
-   → Speed: Normal
-   
-   → Volume: Follow system volume
-5. Default TTS settings applied:
-  
-   → Language: en-US
-  
-   → Speed: Normal
-  
-   → Volume: Follow system
-6. Home Screen displayed
-
-**Alternatives:** 
-- User denies all permissions → app still opens but announcements won't work
-- User can fix permissions later via Settings Screen
-
-**Exceptions:**
-- Permission request dialog fails → retry on next launch
-- Default data fails to save → retry on next launch
----
-
-## 2.4 Activity Diagrams
-
-> Activity diagrams will be added after UML class diagram is finalized.
-> See [5. UML Class Diagram](./5_uml_class_diagram.md)
