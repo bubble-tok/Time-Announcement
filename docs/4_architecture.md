@@ -34,32 +34,38 @@ only with adjacent layers.
 
 ## 4.2 Folder Structure
 
+v1.0 keeps the structure minimal — one file per responsibility, no
+unused subfolders. Layers remain logically separated (per [4.1](#41-overview)),
+so new files can be added under the same folders later (e.g. a
+`day_schedule.dart` model or a `weekday_picker.dart` widget) without
+restructuring.
+
 ```
 lib/
 ├── models/
-│   ├── schedule.dart               ← Schedule (global)
-│   └── tts_settings.dart           ← TtsSettings
+│   ├── schedule.dart          ← Schedule (global)
+│   └── tts_settings.dart      ← TtsSettings
 │
 ├── services/
-│   ├── storage_service.dart        ← Abstract interface
-│   ├── local_storage_service.dart  ← SharedPreferences impl
-│   └── tts_service.dart            ← flutter_tts wrapper
+│   ├── storage_service.dart   ← Abstract interface
+│   ├── local_storage_service.dart
+│   └── tts_service.dart       ← flutter_tts wrapper
 │
 ├── triggers/
-│   └── scheduler_service.dart      ← Schedule/cancel notifications
+│   └── scheduler_service.dart ← Schedule/cancel notifications
 │
 ├── utils/
-│   ├── time_formatter.dart         ← TimeOfDay → "3:00 PM"
-│   └── time_generator.dart         ← generateTimes(start, end, interval)
+│   ├── time_formatter.dart    ← TimeOfDay → "3:00 PM"
+│   └── time_generator.dart    ← generateTimes(start, end, interval)
 │
-├── screens/
-│   ├── home_screen.dart            ← Main screen
-│   └── settings_screen.dart        ← TTS + permissions + about
-│
-└── widgets/
-    ├── schedule_editor.dart        ← Global schedule editor
-    └── time_range_picker.dart      ← Quick Setup widget
+└── screens/
+    ├── home_screen.dart       ← Includes schedule editor + Quick Setup
+    └── settings_screen.dart   ← TTS + permissions + about
 ```
+
+> **Future extension:** a `widgets/` folder can be introduced once UI
+> pieces (e.g. schedule editor, time range picker) need to be reused
+> across multiple screens — no need to pre-create it for v1.0.
 
 ---
 
