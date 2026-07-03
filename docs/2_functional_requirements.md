@@ -1,133 +1,308 @@
-# 3. Non-Functional Requirements
+# 2. Functional Requirements
 
 ## Table of Contents
-- [3.1 Performance](#31-performance)
-- [3.2 Reliability](#32-reliability)
-- [3.3 Usability](#33-usability)
-- [3.4 Compatibility](#34-compatibility)
-- [3.5 Maintainability](#35-maintainability)
-- [3.6 Security](#36-security)
-- [3.7 Accessibility](#37-accessibility)
+- [2.1 Functionality](#21-functionality)
+  - [2.1.1 Required Functionality](#211-required-functionality)
+  - [2.1.2 Future Extensions](#212-future-extensions)
+- [2.2 Scenario Model](#22-scenario-model)
+  - [2.2.1 Actor - User](#221-actor---user)
+  - [2.2.2 Actor - System](#222-actor---system)
+- [2.3 Use Cases](#23-use-cases)
+  - [2.3.1 Quick Setup](#231-quick-setup)
+  - [2.3.2 Add Time](#232-add-time)
+  - [2.3.3 Delete Time](#233-delete-time)
+  - [2.3.4 Toggle Day Schedule](#234-toggle-day-schedule)
+  - [2.3.5 Global Toggle](#235-global-toggle)
+  - [2.3.6 TTS Settings](#236-tts-settings)
+  - [2.3.7 First Launch](#237-first-launch)
+- [2.4 Activity Diagrams](#24-activity-diagrams)
 
 ---
 
-## 3.1 Performance
+## 2.1 Functionality
 
-- App shall launch and display Home Screen within 2 seconds
-- TTS announcement shall begin within 1 second of scheduled time
-- Schedule changes shall be saved and rescheduled within 1 second
-- App shall not consume excessive battery in background (what should be the standard?)
-- App shall not run continuous background processes
+### 2.1.1 Required Functionality
 
----
+#### Time Announcement
+The app runs in the background, and at each user-defined time, announces the current time via TTS. The announcement format is "It's 12:23 PM". Announcements fire at the exact hour and minute the user set, and work even when the app is backgrounded or killed.
 
-## 3.2 Reliability
+#### Schedule Management
+Each day of the week has an independent schedule. A schedule is simply a list of announce times. Users can:
+- Use **Quick Setup** to auto-generate times from a time range and interval
+- Add individual times via **+ Add time**
+- Delete any time individually via **✕**
 
-- All scheduled announcements shall fire at exact time even when app is killed
-- All data shall persist after app restart or force kill
-- All notifications shall be rescheduled automatically on app relaunch
-- App shall not crash on any supported OS version
-- Schedule changes shall not result in duplicate notifications
-- App shall handle missing or corrupted data gracefully with default fallback
+There is no mode concept — just a single list of times per day.
 
----
+#### Global Controls
+The app provides a global ON/OFF toggle that instantly silences or restores all announcements. Each day also has its own enable/disable toggle. Turning a day OFF cancels all its scheduled notifications immediately. Turning it back ON reschedules them.
 
-## 3.3 Usability
+#### TTS Settings
+Users can customize the TTS experience through the Settings screen:
 
-- New user shall be able to set up first announcement within 1 minute
-- Global ON/OFF toggle shall be reachable within 1 tap from Home Screen
-- All error messages shall be clear and actionable
-- Quick Setup shall preview generated times before applying
-- Replacing existing times via Quick Setup shall warn user before clearing
-- Permission denied state shall provide direct link to device settings
-- App shall display last announced time on Home Screen
+| Setting | Options |
+|---------|---------|
+| Language | en-US, en-GB, ko-KR, and more |
+| Speech speed | Slow / Normal / Fast |
+| Volume | Follow system volume or custom app volume |
+| Test | Play a sample announcement with current settings |
 
----
+#### Data Persistence
+All schedules and TTS settings are stored locally on the device using shared_preferences. All data persists after app restart or force kill. On relaunch, all notifications are automatically rescheduled.
 
-## 3.4 Compatibility
-
-- App shall support Android 8.0 (API 26) and above
-- App shall support iOS 13.0 and above
-- App shall support both phone and tablet screen sizes
-- App shall support both light and dark mode
-- App shall function correctly after OS timezone change
-- App shall function correctly after DST transition
+#### Permissions
+The app requires notification and background execution permissions. On first launch, the app requests these permissions. Permission status is shown in the Settings screen with a direct link to device settings if denied.
 
 ---
 
-## 3.5 Maintainability
+### 2.1.2 Future Extensions
 
-- Code shall follow clean architecture (models / services / triggers / screens / widgets)
-- StorageService shall be abstract to allow future backend swap (e.g. Firebase)
-- All services shall be independently testable
-- Code shall follow Dart/Flutter style guidelines
-- All public methods shall have documentation comments
-- No hardcoded strings — all user-facing text in constants file
-
----
-
-## 3.6 Security
-
-### v1.0 (Local Storage)
-- All data stored locally — no user data sent to external servers
-- App shall only request necessary permissions (notifications, background)
-- App shall not collect or transmit any personal data
-- No third-party analytics or tracking SDKs included in v1.0
-
-### v2.0 (Firebase — Future)
-- All data transmitted to Firebase shall be encrypted via HTTPS
-- Firebase Authentication required before accessing user data
-- Firestore security rules shall restrict each user to their own data only
-- No other users' data shall be accessible
-- Firebase Analytics may be added with user consent only
-- Privacy policy shall be updated before v2.0 release
-- App Store / Google Play privacy disclosure shall be updated accordingly
+| Feature | Description |
+|---------|-------------|
+| Cloud sync | Sync schedules across multiple devices via Firebase |
+| Widget | Home screen widget for quick ON/OFF toggle |
+| Custom messages | User-defined announcement text instead of time |
+| Custom voices | Additional voice packs |
 
 ---
 
-## 3.7 Accessibility
+## 2.2 Scenario Model
 
-- App shall be compatible with iOS VoiceOver and Android TalkBack
-- All interactive elements shall have descriptive labels
-- Toggle states shall be announced by screen readers
-- Color shall not be the only indicator of state
-- Minimum touch target size: 44x44 points
+### 2.2.1 Actor - User
+
+| Field | Detail |
+|-------|--------|
+| Description | The end user who sets announce times and manages their daily schedule through the app |
+| Aliases | User |
+| Actor Type | Person |
+| Relationships | Interacts with the app to set schedules and TTS settings |
+
+### 2.2.2 Actor - System
+
+| Field | Detail |
+|-------|--------|
+| Description | The device OS that manages scheduled notifications and triggers TTS announcements at the correct time |
+| Aliases | OS, Device |
+| Actor Type | External System |
+| Relationships | Receives notification schedules from the app and fires them at the correct time |
 
 ---
 
-## 3.8 Localization
+## 2.3 Use Cases
 
-- App UI language shall match system language where supported
-- Supported UI languages for v1.0: English only
-- TTS language shall match system language by default
-- If system language not supported by device TTS engine → fallback to en-US
-- User can manually override TTS language in Settings Screen
-- All user-facing strings shall be stored in constants file
-  to support future localization without code changes
+### 2.3.1 Quick Setup
 
-### TTS Language Support
-> flutter_tts uses the device's native TTS engine.
-> Supported languages vary by device and OS version.
-> The app dynamically loads available languages from the device
-> using flutterTts.getLanguages at runtime.
+| Field | Detail |
+|-------|--------|
+| Name | Quick Setup |
+| Primary Actor | User |
+| Goal | Auto-generate announce times from a time range and interval |
+| Preconditions | App is running. Day schedule screen is open |
+| Trigger | User sets From / To / Every and taps Apply |
 
-Common languages typically available on most devices:
-| Language | Code |
-|----------|------|
-| English (US) | en-US |
-| English (UK) | en-GB |
-| Korean | ko-KR |
-| Vietnamese | vi-VN |
-| French | fr-FR |
-| Spanish | es-ES |
-| Japanese | ja-JP |
-| Chinese (Simplified) | zh-CN |
-| Chinese (Traditional) | zh-TW |
-| German | de-DE |
-| Italian | it-IT |
-| Portuguese (Brazil) | pt-BR |
-| Russian | ru-RU |
-| Arabic | ar |
-| Hindi | hi-IN |
-| Thai | th-TH |
-| Indonesian | id-ID |
+**Scenario:**
+1. User sets From time (e.g. 9:00 AM)
+2. User sets To time (e.g. 6:00 PM)
+3. User selects interval (30 min / 1 hr / 2 hr / 3 hr)
+4. Preview of generated times shown instantly
+5. User taps Apply
+6. If times already exist → confirmation dialog
+   "This will replace your current times. Continue?"
+7. generateTimes() creates List\<TimeOfDay\>
+8. StorageService saves updated schedule
+9. SchedulerService schedules all generated times
+10. UI updates to show new times list
+
+**Alternatives:** User cancels → nothing happens
+
+**Exceptions:**
+- From time > To time → error "Start time must be before end time"
+- From == To → single time generated
+- Storage write fails → old data preserved
+
+---
+
+### 2.3.2 Add Time
+
+| Field | Detail |
+|-------|--------|
+| Name | Add Time |
+| Primary Actor | User |
+| Goal | Add a specific time to a day's announce schedule |
+| Preconditions | App is running. Day schedule screen is open |
+| Trigger | User taps "+ Add time" |
+
+**Scenario:**
+1. User taps "+ Add time"
+2. Native TimePicker opens
+3. User selects hour and minute
+4. System checks for duplicates → error snackbar if duplicate
+5. Time added to announceTimes list
+6. StorageService saves updated schedule
+7. SchedulerService schedules notification for that time
+8. UI updates to show new time
+
+**Alternatives:** User cancels TimePicker → nothing happens
+
+**Exceptions:**
+- Duplicate time → error snackbar, time not added
+- Storage write fails → old data preserved
+
+---
+
+### 2.3.3 Delete Time
+
+| Field | Detail |
+|-------|--------|
+| Name | Delete Time |
+| Primary Actor | User |
+| Goal | Remove a specific time from a day's schedule |
+| Preconditions | App is running. At least one announce time exists |
+| Trigger | User taps ✕ on a time entry |
+
+**Scenario:**
+1. User taps ✕ on a time entry
+2. Time removed from announceTimes list
+3. StorageService saves updated schedule
+4. SchedulerService cancels that notification
+5. UI updates to remove the time
+
+**Exceptions:**
+- Storage write fails → old data preserved
+- Notification cancel fails → logged, user informed
+
+---
+
+### 2.3.4 Toggle Day Schedule
+
+| Field | Detail |
+|-------|--------|
+| Name | Toggle Day Schedule |
+| Primary Actor | User |
+| Goal | Enable or disable all announcements for a specific day |
+| Preconditions | App is running |
+| Trigger | User taps the toggle on a day row |
+
+**Scenario — Toggle OFF:**
+1. User taps toggle → OFF
+2. StorageService saves isEnabled = false
+3. SchedulerService cancels all notifications for that day
+4. UI reflects disabled state
+
+**Scenario — Toggle ON:**
+1. User taps toggle → ON
+2. StorageService saves isEnabled = true
+3. SchedulerService reschedules all notifications for that day
+4. UI reflects enabled state
+
+**Exceptions:**
+- No announce times set → toggle ON has no effect
+- Storage write fails → state reverted
+
+---
+
+### 2.3.5 Global Toggle
+
+| Field | Detail |
+|-------|--------|
+| Name | Global Toggle |
+| Primary Actor | User |
+| Goal | Instantly silence or restore all announcements |
+| Preconditions | App is running |
+| Trigger | User taps the global toggle on Home Screen |
+
+**Scenario — Toggle OFF:**
+1. User taps global toggle → OFF
+2. StorageService saves globalEnabled = false
+3. SchedulerService cancels ALL notifications across all 7 days
+4. UI reflects global OFF state
+
+**Scenario — Toggle ON:**
+1. User taps global toggle → ON
+2. StorageService saves globalEnabled = true
+3. SchedulerService reschedules ALL enabled days and their times
+4. UI reflects global ON state
+
+**Exceptions:**
+- Storage write fails → state reverted
+- Rescheduling fails → user informed via snackbar
+
+---
+
+### 2.3.6 TTS Settings
+
+| Field | Detail |
+|-------|--------|
+| Name | TTS Settings |
+| Primary Actor | User |
+| Goal | Customize TTS language, speed, and volume |
+| Preconditions | App is running. User is on Settings Screen |
+| Trigger | User adjusts any TTS setting |
+
+**Scenario:**
+1. User opens Settings Screen
+2. User changes language / speed / volume
+3. StorageService saves new settings
+4. TtsService applies new settings immediately
+5. User taps "Test Voice" → "It's 3:00 PM" plays
+
+**Exceptions:**
+- Selected language not supported on device → fallback to en-US
+- TTS engine unavailable → error message shown
+- System language not supported 
+  → fallback to en-US automatically
+- User can manually override system language in Settings Screen
+
+### 2.3.7 First Launch
+
+| Field | Detail |
+|-------|--------|
+| Name | First Launch |
+| Primary Actor | User |
+| Goal | Set up permissions and default settings on first app launch |
+| Preconditions | App is installed and launched for the first time |
+| Trigger | User opens the app for the first time |
+
+**Scenario:**
+1. App launches for the first time
+2. App requests notification permission
+   
+   → User grants → continue
+  
+   → User denies → show warning banner on Home Screen
+3. App requests background execution permission
+  
+   → User grants → continue
+  
+   → User denies → show warning banner on Home Screen
+4. Default TTS settings applied:
+   
+   → Language: match system language
+     (if system language not supported by flutter_tts
+      → fallback to en-US)
+   
+   → Speed: Normal
+   
+   → Volume: Follow system volume
+5. Default TTS settings applied:
+  
+   → Language: en-US
+  
+   → Speed: Normal
+  
+   → Volume: Follow system
+6. Home Screen displayed
+
+**Alternatives:** 
+- User denies all permissions → app still opens but announcements won't work
+- User can fix permissions later via Settings Screen
+
+**Exceptions:**
+- Permission request dialog fails → retry on next launch
+- Default data fails to save → retry on next launch
+---
+
+## 2.4 Activity Diagrams
+
+> Activity diagrams will be added after UML class diagram is finalized.
+> See [5. UML Class Diagram](./5_uml_class_diagram.md)
