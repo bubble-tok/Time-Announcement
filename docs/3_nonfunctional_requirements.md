@@ -15,11 +15,10 @@
 
 - App shall launch and display Home Screen within 2 seconds
 - TTS announcement shall begin within 1 second of scheduled time
-- Schedule changes shall be saved and rescheduled within 1 second
-- App shall not consume excessive battery in background (what should be the standard?)
 - App shall not run continuous background processes
-
 ---
+
+## 3.2 Reliability
 
 ## 3.2 Reliability
 
@@ -29,7 +28,7 @@
 - App shall not crash on any supported OS version
 - Schedule changes shall not result in duplicate notifications
 - App shall handle missing or corrupted data gracefully with default fallback
-
+- Changing the global schedule shall apply consistently across all days
 ---
 
 ## 3.3 Usability
@@ -41,6 +40,7 @@
 - Replacing existing times via Quick Setup shall warn user before clearing
 - Permission denied state shall provide direct link to device settings
 - App shall display last announced time on Home Screen
+- App shall support migration from global to per-day scheduling in a future update without data loss
 
 ---
 
