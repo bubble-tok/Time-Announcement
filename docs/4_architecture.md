@@ -17,6 +17,10 @@ Time Announcement follows a clean layered architecture.
 Each layer has a single responsibility and communicates
 only with adjacent layers.
 
+> **Note:** v1.0 uses a single global schedule applied across all days.
+> Per-day scheduling is a planned future enhancement — see [3.3 Usability](#33-usability)
+> and [3.5 Maintainability](#35-maintainability).
+
 | Layer | Description |
 |-------|-------------|
 | Screens | Full-page UI (Home, Settings) |
@@ -33,7 +37,7 @@ only with adjacent layers.
 ```
 lib/
 ├── models/
-│   ├── day_schedule.dart           ← DaySchedule
+│   ├── schedule.dart               ← Schedule (global)
 │   └── tts_settings.dart           ← TtsSettings
 │
 ├── services/
@@ -45,7 +49,7 @@ lib/
 │   └── scheduler_service.dart      ← Schedule/cancel notifications
 │
 ├── utils/
-│   ├── time_formatter.dart         ← TimeOfDay → "It's 3:00 PM"
+│   ├── time_formatter.dart         ← TimeOfDay → "3:00 PM"
 │   └── time_generator.dart         ← generateTimes(start, end, interval)
 │
 ├── screens/
@@ -53,7 +57,7 @@ lib/
 │   └── settings_screen.dart        ← TTS + permissions + about
 │
 └── widgets/
-    ├── day_schedule_tile.dart      ← Per-day schedule editor
+    ├── schedule_editor.dart        ← Global schedule editor
     └── time_range_picker.dart      ← Quick Setup widget
 ```
 
@@ -71,16 +75,14 @@ Business logic layer.
 - **LocalStorageService** — SharedPreferences implementation
 - **TtsService** — wraps flutter_tts for audio playback
 
-
 ### Triggers
 Notification scheduling logic.
-- **SchedulerService** — schedules and cancels repeating weekly
+- **SchedulerService** — schedules and cancels repeating **daily**
   notifications using UNCalendarNotificationTrigger (iOS)
   and AndroidScheduleMode (Android)
 
 ### Utils
 Pure helper functions with no state or dependencies.
-
 
 ### Screens
 Full-page UI components.
@@ -94,19 +96,21 @@ Stateless where possible.
 ---
 ## 4.4 Data Model
 
-### DaySchedule
-Represents one day's announcement schedule.
+### Schedule
+Represents the global announcement schedule, applied every day.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| isEnabled | bool | Whether this day is active |
-| announceTimes | List\<TimeOfDay\> | List of times to announce |
+| isEnabled | bool | Whether announcements are active |
+| announceTimes | List\<TimeOfDay\> | List of times to announce, applied daily |
 
 Example:
 ```
-Monday: isEnabled=true, announceTimes=[9:00, 12:30, 17:00]
-Sunday: isEnabled=false, announceTimes=[]
+isEnabled=true, announceTimes=[9:00, 12:30, 17:00]
 ```
+
+> **Future (v2.0+):** `Schedule` may be extended to a `Map<Weekday, Schedule>`
+> to support per-day customization without breaking existing global-schedule data.
 
 ### TtsSettings
 Represents the user's TTS preferences.
@@ -125,7 +129,7 @@ Represents the user's TTS preferences.
 ### Quick Setup
 User wants to set announcements every hour from 9 AM to 6 PM.
 
-1. User opens Monday's schedule and fills in Quick Setup:
+1. User opens the schedule and fills in Quick Setup:
    From: 9:00 AM / To: 6:00 PM / Every: 1 hour
 2. App instantly previews the generated times:
    9:00, 10:00, ... 6:00 PM
@@ -135,37 +139,37 @@ User wants to set announcements every hour from 9 AM to 6 PM.
 5. TimeGenerator calculates the full list of TimeOfDay values
 6. The new list is saved to local storage via StorageService
 7. For each time in the list, SchedulerService creates a
-   repeating weekly notification. The notification title
+   repeating daily notification. The notification title
    is pre-filled with the announcement text
-   (e.g. "It's 9:00 AM") via TimeFormatter
+   (e.g. "9:00 AM") via TimeFormatter
 8. UI updates to show the new time list
 
 ---
 
 ### Add Single Time
-User wants to add one specific time (e.g. 2:23 PM) to Thursday.
+User wants to add one specific time (e.g. 2:23 PM) to the schedule.
 
-1. User taps "+ Add time" on Thursday's schedule
+1. User taps "+ Add time" on the schedule screen
 2. Native TimePicker opens
 3. User selects 2:23 PM
 4. App checks for duplicates — if 2:23 PM already exists,
    an error snackbar appears and nothing is added
-5. The new time is added to Thursday's announceTimes list
+5. The new time is added to the global announceTimes list
 6. StorageService saves the updated schedule
-7. SchedulerService creates a new repeating weekly notification
-   for every Thursday at 2:23 PM
+7. SchedulerService creates a new repeating daily notification
+   for 2:23 PM
 8. UI updates to show the new time
 
 ---
 
 ### Announcement Firing
-It's Thursday 2:23 PM — the OS fires the scheduled notification.
+2:23 PM — the OS fires the scheduled notification.
 
 1. The device OS triggers the notification at exactly 2:23 PM
 2. The app's notification callback fires in the background
-3. TtsService reads the notification title "It's 2:23 PM"
+3. TtsService reads the notification title "2:23 PM"
    and plays it via the device TTS engine
-4. The user hears "It's 2:23 PM" 🔊
+4. The user hears "2:23 PM"
 
 > The announcement text is pre-calculated and stored in the
 > notification title at scheduling time — not at firing time.
@@ -178,8 +182,8 @@ User reopens the app after it was killed.
 
 1. App checks if this is a first launch or a relaunch
 2. Global ON/OFF state is loaded from storage
-3. All 7 day schedules are loaded from storage
-4. If global is ON, all enabled day schedules are rescheduled
+3. The global schedule is loaded from storage
+4. If global is ON, the schedule is rescheduled
    (notifications may have been cleared when app was killed)
 5. TTS settings (language, speed, volume) are loaded
    and applied to TtsService
@@ -194,7 +198,7 @@ User opens the app for the very first time.
 2. Notification permission is requested from the user
 3. Background execution permission is requested
 4. Default schedule is applied:
-   all 7 days set to disabled with no announce times
+   disabled, with no announce times
 5. Default TTS settings are applied:
    language matches the device system language
    (falls back to en-US if the system language is
@@ -211,13 +215,10 @@ User opens the app for the very first time.
 {
   "global_enabled": true,
 
-  "monday":    { "isEnabled": true,  "times": ["9:0", "10:0", "14:23"] },
-  "tuesday":   { "isEnabled": true,  "times": ["8:0", "18:0"] },
-  "wednesday": { "isEnabled": false, "times": [] },
-  "thursday":  { "isEnabled": true,  "times": ["9:0"] },
-  "friday":    { "isEnabled": true,  "times": ["9:0", "17:0"] },
-  "saturday":  { "isEnabled": true,  "times": ["10:0"] },
-  "sunday":    { "isEnabled": false, "times": [] },
+  "schedule": {
+    "isEnabled": true,
+    "times": ["9:0", "10:0", "14:23", "17:0"]
+  },
 
   "tts_language":      "system",
   "tts_speed":         0.5,
@@ -240,3 +241,7 @@ Local only              →  Multi-device sync
 No privacy policy       →  Privacy policy required
 No analytics            →  Firebase Analytics (opt-in)
 ```
+
+> Per-day scheduling may also be introduced in a future release,
+> restructuring `schedule` into a per-weekday map while preserving
+> existing global-schedule data (see [4.4 Data Model](#44-data-model)).

@@ -24,7 +24,7 @@
 ### 2.1.1 Required Functionality
 
 #### Time Announcement
-The app runs in the background, and at each user-defined time, announces the current time via TTS. The announcement format is "It's 12:23 PM". Announcements fire at the exact hour and minute the user set, and work even when the app is backgrounded or killed.
+The app runs in the background, and at each user-defined time, announces the current time via TTS. The announcement format is "12:23 PM". Announcements fire at the exact hour and minute the user set, and work even when the app is backgrounded or killed.
 
 #### Schedule Management
 Each day of the week has an independent schedule. A schedule is simply a list of announce times. Users can:
@@ -314,7 +314,7 @@ The app requires notification and background execution permissions. On first lau
 2. User changes language / speed / volume
 3. StorageService saves new settings
 4. TtsService applies new settings immediately
-5. User taps "Test Voice" → "It's 3:00 PM" plays
+5. User taps "Test Voice" → "3:00 PM" plays
 
 **Exceptions:**
 - Selected language not supported on device → fallback to en-US
