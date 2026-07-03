@@ -111,25 +111,10 @@
 > The app dynamically loads available languages from the device
 > using flutterTts.getLanguages at runtime.
 
+> Note: We will use en-US for now. Adding languages would be included in the future extensions.
+
+
 Common languages typically available on most devices:
 | Language | Code |
 |----------|------|
 | English (US) | en-US |
-| English (UK) | en-GB |
-| Korean | ko-KR |
-| Vietnamese | vi-VN |
-| French | fr-FR |
-| Spanish | es-ES |
-| Japanese | ja-JP |
-| Chinese (Simplified) | zh-CN |
-| Chinese (Traditional) | zh-TW |
-| German | de-DE |
-| Italian | it-IT |
-| Portuguese (Brazil) | pt-BR |
-| Russian | ru-RU |
-| Arabic | ar |
-| Hindi | hi-IN |
-| Thai | th-TH |
-| Indonesian | id-ID |
-
-> Not all languages may be available on all devices.
