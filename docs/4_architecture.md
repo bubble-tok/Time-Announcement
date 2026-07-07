@@ -17,9 +17,11 @@ Time Announcement follows a clean layered architecture.
 Each layer has a single responsibility and communicates
 only with adjacent layers.
 
-> **Note:** v1.0 uses a single global schedule applied across all days.
-> Per-day scheduling is a planned future enhancement — see [3.3 Usability](#33-usability)
-> and [3.5 Maintainability](#35-maintainability).
+> **Note:** Beta uses a **hardcoded** announce-time list, defined in code rather than
+> edited by the user. There is no schedule editor UI in beta. A user-editable global
+> schedule (Quick Setup, Add/Delete Time) and per-day scheduling are both planned future
+> enhancements — see [3.3 Usability](#33-usability), [3.5 Maintainability](#35-maintainability),
+> and [4.7 Future Architecture](#47-future-architecture-v20).
 
 | Layer | Description |
 |-------|-------------|
@@ -34,16 +36,16 @@ only with adjacent layers.
 
 ## 4.2 Folder Structure
 
-v1.0 keeps the structure minimal — one file per responsibility, no
+Beta keeps the structure minimal — one file per responsibility, no
 unused subfolders. Layers remain logically separated (per [4.1](#41-overview)),
 so new files can be added under the same folders later (e.g. a
-`day_schedule.dart` model or a `weekday_picker.dart` widget) without
-restructuring.
+`day_schedule.dart` model, a `time_generator.dart` util, or a
+`weekday_picker.dart` widget) without restructuring.
 
 ```
 lib/
 ├── models/
-│   ├── schedule.dart          ← Schedule (global)
+│   ├── schedule.dart          ← Schedule (hardcoded list wrapper)
 │   └── tts_settings.dart      ← TtsSettings
 │
 ├── services/
@@ -55,17 +57,16 @@ lib/
 │   └── scheduler_service.dart ← Schedule/cancel notifications
 │
 ├── utils/
-│   ├── time_formatter.dart    ← TimeOfDay → "3:00 PM"
-│   └── time_generator.dart    ← generateTimes(start, end, interval)
+│   └── time_formatter.dart    ← TimeOfDay → "3:00 PM"
 │
 └── screens/
-    ├── home_screen.dart       ← Includes schedule editor + Quick Setup
-    └── settings_screen.dart   ← TTS + permissions + about
+    ├── home_screen.dart       ← Global ON/OFF toggle only
+    └── settings_screen.dart   ← Volume + permissions + about
 ```
 
-> **Future extension:** a `widgets/` folder can be introduced once UI
-> pieces (e.g. schedule editor, time range picker) need to be reused
-> across multiple screens — no need to pre-create it for v1.0.
+> **Deferred to future extension:** `time_generator.dart` (Quick Setup interval
+> calculation) and a `widgets/` folder for the schedule editor UI (time list,
+> time range picker) are not needed for beta and are not pre-created.
 
 ---
 
@@ -99,72 +100,58 @@ Never depend directly on each other.
 Reusable UI components used inside Screens.
 Stateless where possible.
 
+*(Not used in beta — introduced once a schedule editor UI is built. See 4.2.)*
+
 ---
 ## 4.4 Data Model
 
 ### Schedule
-Represents the global announcement schedule, applied every day.
+Represents the announcement schedule, applied every day. In beta, `announceTimes` is
+a **fixed list hardcoded in code** (not user-editable), but the model itself is kept
+generic so it can later be populated from user input or storage without changing its
+shape.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| isEnabled | bool | Whether announcements are active |
-| announceTimes | List\<TimeOfDay\> | List of times to announce, applied daily |
+| isEnabled | bool | Whether announcements are active (tied to the global toggle) |
+| announceTimes | List\<TimeOfDay\> | Hardcoded list of times to announce, applied daily |
 
 Example:
 ```
 isEnabled=true, announceTimes=[9:00, 12:30, 17:00]
 ```
 
-> **Future (v2.0+):** `Schedule` may be extended to a `Map<Weekday, Schedule>`
-> to support per-day customization without breaking existing global-schedule data.
+> **Future (v2.0+):** `announceTimes` becomes user-editable (Quick Setup, Add/Delete Time),
+> and `Schedule` may be extended to a `Map<Weekday, Schedule>` to support per-day
+> customization without breaking existing global-schedule data.
 
 ### TtsSettings
-Represents the user's TTS preferences.
+Represents the user's TTS preferences. In beta, only `followSystem`/`appVolume` are
+user-adjustable; `language` and `speed` are fixed at their defaults.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| language | String | "system" | TTS language code. "system" = match device language |
-| speed | double | 0.5 | Speech rate. 0.25=slow / 0.5=normal / 1.0=fast |
-| followSystem | bool | true | If true, ignores appVolume and follows device volume |
-| appVolume | double | 1.0 | Custom volume 0.0~1.0. Only used if followSystem=false |
+| language | String | "system" | TTS language code. "system" = match device language. **Not user-adjustable in beta.** |
+| speed | double | 0.5 | Speech rate. **Not user-adjustable in beta** — fixed at normal (0.5). |
+| followSystem | bool | true | If true, ignores appVolume and follows device volume. **User-adjustable.** |
+| appVolume | double | 1.0 | Custom volume 0.0~1.0. Only used if followSystem=false. **User-adjustable.** |
 
 ---
 
 ## 4.5 Data Flow
 
-### Quick Setup
-User wants to set announcements every hour from 9 AM to 6 PM.
+### Hardcoded Schedule Initialization
+App starts (first launch or relaunch) and needs to schedule the fixed announce times.
 
-1. User opens the schedule and fills in Quick Setup:
-   From: 9:00 AM / To: 6:00 PM / Every: 1 hour
-2. App instantly previews the generated times:
-   9:00, 10:00, ... 6:00 PM
-3. User taps Apply
-4. If times already exist, a confirmation dialog appears:
-   "This will replace your current times. Continue?"
-5. TimeGenerator calculates the full list of TimeOfDay values
-6. The new list is saved to local storage via StorageService
-7. For each time in the list, SchedulerService creates a
-   repeating daily notification. The notification title
-   is pre-filled with the announcement text
-   (e.g. "9:00 AM") via TimeFormatter
-8. UI updates to show the new time list
+1. App reads the hardcoded `announceTimes` list from `schedule.dart` (not from storage)
+2. Global ON/OFF state is loaded from storage
+3. If global is ON, SchedulerService creates a repeating daily notification for each
+   hardcoded time. Each notification title is pre-filled via TimeFormatter (e.g. "9:00 AM")
+4. If global is OFF, no notifications are scheduled
+5. Home Screen displays the current global state
 
----
-
-### Add Single Time
-User wants to add one specific time (e.g. 2:23 PM) to the schedule.
-
-1. User taps "+ Add time" on the schedule screen
-2. Native TimePicker opens
-3. User selects 2:23 PM
-4. App checks for duplicates — if 2:23 PM already exists,
-   an error snackbar appears and nothing is added
-5. The new time is added to the global announceTimes list
-6. StorageService saves the updated schedule
-7. SchedulerService creates a new repeating daily notification
-   for 2:23 PM
-8. UI updates to show the new time
+> Because the time list is hardcoded, there is no save/load step for the schedule itself —
+> only `global_enabled` and TTS volume settings are persisted (see 4.6).
 
 ---
 
@@ -188,12 +175,10 @@ User reopens the app after it was killed.
 
 1. App checks if this is a first launch or a relaunch
 2. Global ON/OFF state is loaded from storage
-3. The global schedule is loaded from storage
-4. If global is ON, the schedule is rescheduled
+3. TTS volume setting is loaded and applied to TtsService
+4. If global is ON, the hardcoded schedule is rescheduled
    (notifications may have been cleared when app was killed)
-5. TTS settings (language, speed, volume) are loaded
-   and applied to TtsService
-6. Home Screen is displayed with the current state
+5. Home Screen is displayed with the current state
 
 ---
 
@@ -203,49 +188,46 @@ User opens the app for the very first time.
 1. App detects no saved data exists
 2. Notification permission is requested from the user
 3. Background execution permission is requested
-4. Default schedule is applied:
-   disabled, with no announce times
-5. Default TTS settings are applied:
-   language matches the device system language
-   (falls back to en-US if the system language is
-   not supported by the device TTS engine)
-   speed is set to normal, volume follows system
-6. Default global state is saved as ON
+4. Default TTS settings are applied:
+   volume follows system (language/speed fixed at defaults — not user-facing in beta)
+5. Default global state is saved as ON
+6. The hardcoded announce-time list is scheduled
 7. Home Screen is displayed
 
 ---
 
 ## 4.6 Storage Schema
 
+Only the global toggle and volume setting are persisted in beta — the announce-time
+list is not stored, since it's hardcoded in code.
+
 ```json
 {
   "global_enabled": true,
 
-  "schedule": {
-    "isEnabled": true,
-    "times": ["9:0", "10:0", "14:23", "17:0"]
-  },
-
-  "tts_language":      "system",
-  "tts_speed":         0.5,
   "tts_follow_system": true,
   "tts_app_volume":    1.0
 }
 ```
 
+> `tts_language` and `tts_speed` are omitted from storage in beta since they're not
+> user-adjustable — they're applied from fixed defaults at runtime. `schedule.times`
+> is likewise omitted; see [4.4 Data Model](#44-data-model).
+
 ---
 
 ## 4.7 Future Architecture (v2.0)
 
-When Firebase is added:
+When the schedule becomes user-editable and Firebase is added:
 
 ```
-LocalStorageService     →  FirebaseStorageService
-SharedPreferences       →  Firestore
-No auth                 →  Firebase Authentication
-Local only              →  Multi-device sync
-No privacy policy       →  Privacy policy required
-No analytics            →  Firebase Analytics (opt-in)
+Hardcoded announceTimes →  User-editable via Quick Setup / Add / Delete Time
+LocalStorageService      →  FirebaseStorageService
+SharedPreferences        →  Firestore
+No auth                  →  Firebase Authentication
+Local only               →  Multi-device sync
+No privacy policy        →  Privacy policy required
+No analytics              →  Firebase Analytics (opt-in)
 ```
 
 > Per-day scheduling may also be introduced in a future release,
