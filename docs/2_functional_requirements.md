@@ -2,54 +2,66 @@
 
 ## Table of Contents
 - [2.1 Functionality](#21-functionality)
-  - [2.1.1 Required Functionality](#211-required-functionality)
+  - [2.1.1 Required Functionality (Beta)](#211-required-functionality-beta)
   - [2.1.2 Future Extensions](#212-future-extensions)
 - [2.2 Scenario Model](#22-scenario-model)
   - [2.2.1 Actor - User](#221-actor---user)
   - [2.2.2 Actor - System](#222-actor---system)
 - [2.3 Use Cases](#23-use-cases)
-  - [2.3.1 Quick Setup](#231-quick-setup)
-  - [2.3.2 Add Time](#232-add-time)
-  - [2.3.3 Delete Time](#233-delete-time)
-  - [2.3.4 Toggle Day Schedule](#234-toggle-day-schedule)
-  - [2.3.5 Global Toggle](#235-global-toggle)
-  - [2.3.6 TTS Settings](#236-tts-settings)
-  - [2.3.7 First Launch](#237-first-launch)
-- [2.4 Activity Diagrams](#24-activity-diagrams)
+  - [2.3.1 First Launch](#231-first-launch)
+  - [2.3.2 Global Toggle](#232-global-toggle)
+  - [2.3.3 TTS Settings](#233-tts-settings)
+- [2.4 Use Cases (Future Extension)](#24-use-cases-future-extension)
+  - [2.4.1 Quick Setup](#241-quick-setup)
+  - [2.4.2 Add Time](#242-add-time)
+  - [2.4.3 Delete Time](#243-delete-time)
+  - [2.4.4 Toggle Day Schedule](#244-toggle-day-schedule)
+  - [2.4.5 TTS Settings](#245-tts-settings)
 
----
 
 ## 2.1 Functionality
 
-### 2.1.1 Required Functionality
+### 2.1.1 Required Functionality (Beta)
 
 #### Time Announcement
-The app runs in the background, and at each user-defined time, announces the current time via TTS. The announcement format is "12:23 PM". Announcements fire at the exact hour and minute the user set, and work even when the app is backgrounded or killed.
+The app runs in the background and announces the current time via TTS at a fixed, hardcoded
+set of times (e.g. every hour, or a small preset list defined at build time). The announcement
+format is "12:23 PM". Announcements fire at the exact hour and minute programmed into the app,
+and work even when the app is backgrounded or killed.
 
-#### Schedule Management
-Each day of the week has an independent schedule. A schedule is simply a list of announce times. Users can:
-- Use **Quick Setup** to auto-generate times from a time range and interval
-- Add individual times via **+ Add time**
-- Delete any time individually via **✕**
-
-There is no mode concept — just a single list of times per day.
+#### Schedule Management (Beta)
+There is no user-facing schedule editing in beta. The announce times are a fixed list
+hardcoded in the app, not stored per-day and not
+user-configurable. This list is the single source of truth the scheduler reads from.
 
 #### Global Controls
-The app provides a global ON/OFF toggle that instantly silences or restores all announcements. Each day also has its own enable/disable toggle. Turning a day OFF cancels all its scheduled notifications immediately. Turning it back ON reschedules them.
+The app provides a global ON/OFF toggle that instantly silences or restores all announcements.
+Turning it OFF cancels all scheduled notifications immediately. Turning it back ON reschedules
+the fixed announce-time list.
+
+*(Per-day enable/disable is deferred — see 2.4.4.)*
 
 #### TTS Settings
-Users can customize the TTS experience through the Settings screen:
+Users can adjust one setting in beta:
 
 | Setting | Options |
 |---------|---------|
-| Language | en-US |
 | Volume | Follow system volume or custom app volume |
 
+Language is not user-selectable in beta; it defaults to the device's system language, falling
+back to en-US if unsupported (see 2.3.1 First Launch).
+
 #### Data Persistence
-All schedules and TTS settings are stored locally on the device using shared_preferences. All data persists after app restart or force kill. On relaunch, all notifications are automatically rescheduled.
+The global ON/OFF state and volume setting are stored locally on the device using
+shared_preferences. This data persists after app restart or force kill. On relaunch, the
+global toggle state is restored and the fixed announce-time list is rescheduled if enabled.
+
+*(No per-time or per-day data needs to persist in beta, since the schedule is hardcoded.)*
 
 #### Permissions
-The app requires notification and background execution permissions. On first launch, the app requests these permissions. Permission status is shown in the Settings screen with a direct link to device settings if denied.
+The app requires notification and background execution permissions. On first launch, the app
+requests these permissions. Permission status is shown in the Settings screen with a direct
+link to device settings if denied.
 
 ---
 
@@ -57,6 +69,7 @@ The app requires notification and background execution permissions. On first lau
 
 | Feature | Description |
 |---------|-------------|
+| User-editable schedule | Quick Setup, Add Time, Delete Time, per-day Toggle (see 2.4.1–2.4.4) |
 | Cloud sync | Sync schedules across multiple devices via Firebase |
 | Widget | Home screen widget for quick ON/OFF toggle |
 | Custom messages | User-defined announcement text instead of time |
@@ -64,9 +77,9 @@ The app requires notification and background execution permissions. On first lau
 
 | Setting | Options |
 |---------|---------|
+| Language | User-selectable, beyond system default |
 | Speech speed | Slow / Normal / Fast |
 | Test | Play a sample announcement with current settings |
-
 
 ---
 
@@ -107,33 +120,33 @@ The app requires notification and background execution permissions. On first lau
 
 **Scenario:**
 1. App launches for the first time
-2. App requests notification permission 
-   
+2. App requests notification permission
+
    → User grants → continue
 
    → User denies → show warning banner on Home Screen
 3. App requests background execution permission
-  
+
    → User grants → continue
    → User denies → show warning banner on Home Screen
 4. Default TTS settings applied:
-   
+
    → Language: match system language
-     (Set to en-US)
-   
-   → Speed: Normal
-   
+     (Set to en-US if unsupported)
+
    → Volume: Follow system volume
 
-5. Home Screen displayed
+5. Fixed announce-time list is scheduled (if global toggle defaults ON)
+6. Home Screen displayed
 
-**Alternatives:** 
+**Alternatives:**
 - User denies all permissions → app still opens but announcements won't work
 - User can fix permissions later via Settings Screen
 
 **Exceptions:**
 - Permission request dialog fails → retry on next launch
 - Default data fails to save → retry on next launch
+
 ---
 
 ### 2.3.2 Global Toggle
@@ -149,13 +162,13 @@ The app requires notification and background execution permissions. On first lau
 **Scenario — Toggle OFF:**
 1. User taps global toggle → OFF
 2. StorageService saves globalEnabled = false
-3. SchedulerService cancels ALL notifications across all 7 days
+3. SchedulerService cancels ALL notifications for the fixed announce-time list
 4. UI reflects global OFF state
 
 **Scenario — Toggle ON:**
 1. User taps global toggle → ON
 2. StorageService saves globalEnabled = true
-3. SchedulerService reschedules ALL enabled days and their times
+3. SchedulerService reschedules the fixed announce-time list
 4. UI reflects global ON state
 
 **Exceptions:**
@@ -164,7 +177,7 @@ The app requires notification and background execution permissions. On first lau
 
 ---
 
-### 2.4.5 TTS Settings
+### 2.3.3 TTS Settings
 
 | Field | Detail |
 |-------|--------|
@@ -177,15 +190,17 @@ The app requires notification and background execution permissions. On first lau
 **Scenario:**
 1. User opens the app
 2. User changes volume
-3. StorageService saves new settings
-4. TtsService applies new settings immediately
+3. StorageService saves new setting
+4. TtsService applies new setting immediately
 
 **Exceptions:**
 - TTS engine unavailable → error message shown
+
 ---
 
 ## 2.4 Use Cases (Future Extension)
 
+*(Deferred post-beta — full user-editable schedule)*
 
 ### 2.4.1 Quick Setup
 
@@ -296,7 +311,6 @@ The app requires notification and background execution permissions. On first lau
 - No announce times set → toggle ON has no effect
 - Storage write fails → state reverted
 
-
 ---
 
 ### 2.4.5 TTS Settings
@@ -319,7 +333,6 @@ The app requires notification and background execution permissions. On first lau
 **Exceptions:**
 - Selected language not supported on device → fallback to en-US
 - TTS engine unavailable → error message shown
-- System language not supported 
+- System language not supported
   → fallback to en-US automatically
 - User can manually override system language in Settings Screen
-
